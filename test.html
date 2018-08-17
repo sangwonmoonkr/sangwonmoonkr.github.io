@@ -53,7 +53,7 @@ function getLink(addr) {
 }
 
 function getValue() {
-	var tmp = simpleStorage.get();
+	var tmp = simpleStorage.storedData;
     document.getElementById('storedData').innerHTML=tmp.toNumber();
 
 }
