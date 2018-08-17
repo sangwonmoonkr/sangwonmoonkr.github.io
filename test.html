@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="CACHE-CONTROL" content="NO-CACHE">
+  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.2.3/milligram.min.css">
+  <title>Simple Storage Dapp 예제 </title>
+  <style>
+    body {margin-left:50px;}
+    #storedData {font-size:300%; margin-right:10px;}
+    #newValue {width: 200px; margin-right:10px; text-align:right;}
+  </style>
+</head>
+<body>
+<h3>Simple Storage dApp 예제</h3>
+<ul>
+  <li>컨트랙트 주소: <span id="contractAddr"></span></li>
+   <li>컨트랙트에 저장된 값: <span id="storedData"></span>
+    <button onclick="getValue()">새로고침</button> (현재블록: <span id="lastBlock"></span>)</li>
+
+</ul>
+
+컨트랙트 소스
+<script src="https://gist.github.com/atomrigs/7c633570496b79623bed5d1286f93f3a.js"></script>
+
+HTML 소스<br>
+<a href="https://github.com/atomrigs/atomrigs.github.io/blob/master/simplestorage.html">https://github.com/atomrigs/atomrigs.github.io/blob/master/simplestorage.html</a>;
+<br><br>
+<p>
+<a href="http://www.chaintalk.io/archive/lecture?sca=%EB%82%98%EB%8F%84+dApp+%EA%B0%9C%EB%B0%9C"><i>나도 dApp 개발해 보자 시리즈 by Atomrigs © 2017</i></a>
+</p>
+
+</body>
+<script src="https://cdn.rawgit.com/ethereum/web3.js/develop/dist/web3.js"></script>
+<!-- script src="https://code.jquery.com/jquery-3.1.1.slim.min.js"></script -->
+<script>
+var contractAddress = '0xc5244053ecA508a11951400fc7Af28738Fd0ce77';
+var abi = [{"constant":false,"inputs":[{"name":"x","type":"uint256"}],"name":"set","outputs":[],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"get","outputs":[{"name":"","type":"uint256"}],"payable":false,"type":"function"}];
+var simpleStorageContract;
+var simpleStorage;
+    var web3 = new Web3();
+    var provider = new web3.providers.HttpProvider('https://ropsten.infura.io/v3/2ed1307ce0264ac1a1e0f0f1440aa62e');
+    web3.setProvider(provider);
+
+  simpleStorageContract = web3.eth.contract(abi);
+  simpleStorage = simpleStorageContract.at(contractAddress);
+  document.getElementById('contractAddr').innerHTML = getLink(contractAddress);
+
+
+
+function getLink(addr) {
+  return '<a target="_blank" href=https://testnet.etherscan.io/address/' + addr + '>' + addr +'</a>';
+}
+
+function getValue() {
+	var tmp = simpleStorage.get();
+    document.getElementById('storedData').innerHTML=tmp.toNumber();
+
+}
+
+
+
+</script>
+</html>
