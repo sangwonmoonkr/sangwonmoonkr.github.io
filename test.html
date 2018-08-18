@@ -17,6 +17,7 @@
   <li>컨트랙트 주소: <span id="contractAddr"></span></li>
    <li>컨트랙트에 저장된 값: <span id="storedData"></span>
     <button onclick="getValue()">새로고침</button> (현재블록: <span id="lastBlock"></span>)</li>
+      <li><input id="newValue" type="text"><button onclick="setValue()">새 값으로 저장하기</button>
 
 </ul>
 
@@ -56,6 +57,11 @@ function getValue() {
 	var tmp = simpleStorage.storedData();
     document.getElementById('storedData').innerHTML=tmp.toNumber();
 
+}
+
+function setValue() {
+    var newValue = document.getElementById('newValue').value;
+    simpleStorage.set(newValue);
 }
 
 
