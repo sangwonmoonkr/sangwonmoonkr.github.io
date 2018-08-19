@@ -15,6 +15,15 @@ contract Game {
     modifier onlythisContract() { if (msg.sender == thiscontract) _; }
     modifier onlyContracts() { if (msg.sender == evenaddr || msg.sender == oddaddr) _; }
 
+    function () payable {}
+
+    function feed() {
+        if(msg.sender != feeaddr) throw;
+        evenaddr.call.value(0.1 ether)();
+        oddaddr.call.value(0.1 ether)();
+    }
+
+
     function Game() {
         thiscontract = msg.sender;
         feeaddr = msg.sender;
@@ -31,7 +40,7 @@ contract Game {
 
     function start() onlyContracts {
         if(gameon == true) throw;
-        if(evencontract.gettotaleth() > 0){
+        if(evencontract.gettotaleth() > 0 && oddcontract.gettotaleth() > 0){
         nextblocknumber = block.number+1;
         gameon == true;
         }
@@ -66,116 +75,6 @@ contract Game {
 }
 
 
-contract Even {
-
-    uint256 public totaleth;
-    uint256 public totalplayer;
-    address public gameaddr;
-    address public oppaddr;
-    address public thisaddr=this;
-    Game public gamecontract;
-    Odd public oppcontract;
-
-    function Even(address _addr) {
-        gameaddr= _addr;
-        gamecontract=Game(gameaddr);
-    }
-
-    function gettotaleth() constant returns (uint256){
-        return totaleth;
-    }
-    function getlength() constant returns (uint256){
-        return list.length;
-    }
-
-    modifier onlyContracts() { if (msg.sender == thisaddr || msg.sender == oppaddr) _; }
-    modifier onlyGameContract() { if (msg.sender == gameaddr) _; }
-
-    function set(address _addr) onlyGameContract {
-        oppaddr = _addr;
-        oppcontract = Odd(oppaddr);
-    }
-
-    struct db {
-        address addr;
-        uint256 sum;
-    }
-
-    db[] public list;
-
-    struct player {
-        uint256 index;
-        uint256 beteth;
-        bool withdrawed;
-    }
-
-
-    mapping (address => player) players;
-
-    function () payable {
-
-        if(msg.value >0){
-
-            if(players[msg.sender].beteth==0){
-                list.push(db({
-                    addr: msg.sender,
-                    sum: msg.value
-                }));
-                players[msg.sender].index=totalplayer;
-                totalplayer+=1;
-            }
-            else{
-                list[players[msg.sender].index].sum+=msg.value;
-            }
-
-            totaleth += msg.value;
-            players[msg.sender].beteth+=msg.value;
-            gamecontract.start();
-
-
-        }
-
-    }
-
-    function reset() onlyContracts {
-        delete list;
-        totaleth = 0;
-        totalplayer=0;
-    }
-
-    function win() onlyGameContract {
-        for(uint i=0; i<list.length; i++)
-        {
-            if(list[i].sum>0 && list[i].sum == players[list[i].addr].beteth) {
-                    if(players[list[i].addr].withdrawed == true) throw;
-                    list[i].addr.call.value(list[i].sum)();
-                    players[list[i].addr].withdrawed = true;
-            }
-        }
-    }
-
-    function lose() onlyGameContract {
-        uint256 fee = totaleth / 100;
-        gameaddr.call.value(fee)();
-        totaleth -= fee;
-        uint256 opplength=uint256(oppcontract.getlength());
-        for(uint i=0; i<opplength; i++)
-        {
-            if(oppcontract.list[i].sum>0 && oppcontract.list[i].sum == oppcontract.players[oppcontract.list[i].addr].beteth) {
-                    if(oppcontract.players[oppcontract.list[i].addr].withdrawed == true) throw;
-                    uint256 reward = totaleth * ( oppcontract.list[i].sum /oppcontract.totaleth ) ;
-                    oppcontract.list[i].addr.call.value(reward)();
-                    oppcontract.players[oppcontract.list[i].addr].withdrawed = true;
-            }
-        }
-        reset();
-        oppcontract.reset();
-
-    }
-
-}
-
-
 contract Odd {
 
     uint256 public totaleth;
@@ -187,7 +86,7 @@ contract Odd {
     Even public oppcontract;
 
     function Odd(address _addr) {
-        gameaddr= _addr;
+        gameaddr=_addr;
         gamecontract=Game(gameaddr);
     }
 
@@ -196,6 +95,17 @@ contract Odd {
     }
     function getlength() constant returns (uint256){
         return list.length;
+    }
+    function getlist(uint256 _i) constant returns (address _addr, uint256 _sum){
+        return (list[_i].addr,list[_i].sum);
+    }
+
+    function getplayer(address _addr) constant returns (uint256 _index, uint256 _beteth, bool _withdrawed){
+        return (players[_addr].index, players[_addr].beteth, players[_addr].withdrawed);
+    }
+
+    function setwithdrawal(address _addr){
+        players[_addr].withdrawed = false;
     }
 
     modifier onlyContracts() { if (msg.sender == thisaddr || msg.sender == oppaddr) _; }
@@ -206,12 +116,12 @@ contract Odd {
         oppcontract = Even(oppaddr);
     }
 
-    struct db {
+    struct Db {
         address addr;
         uint256 sum;
     }
 
-    db[] public list;
+    Db[] public list;
 
     struct player {
         uint256 index;
@@ -223,11 +133,12 @@ contract Odd {
     mapping (address => player) players;
 
     function () payable {
-
+        if(msg.sender != gameaddr)
+        {
         if(msg.value >0){
 
             if(players[msg.sender].beteth==0){
-                list.push(db({
+                list.push(Db({
                     addr: msg.sender,
                     sum: msg.value
                 }));
@@ -243,6 +154,7 @@ contract Odd {
             gamecontract.start();
 
 
+        }
         }
 
     }
@@ -268,14 +180,139 @@ contract Odd {
         uint256 fee = totaleth / 100;
         gameaddr.call.value(fee)();
         totaleth -= fee;
-        uint256 opplength=uint256(oppcontract.getlength());
-        for(uint i=0; i<opplength; i++)
+        for(uint i=0; i<oppcontract.getlength(); i++)
         {
-            if(oppcontract.list[i].sum>0 && oppcontract.list[i].sum == oppcontract.players[oppcontract.list[i].addr].beteth) {
-                    if(oppcontract.players[oppcontract.list[i].addr].withdrawed == true) throw;
-                    uint256 reward = totaleth * ( oppcontract.list[i].sum /oppcontract.totaleth ) ;
-                    oppcontract.list[i].addr.call.value(reward)();
-                    oppcontract.players[oppcontract.list[i].addr].withdrawed = true;
+            (address _addr, uint256 _sum) = oppcontract.getlist(i);
+            (uint256 _index, uint256 _beteth, bool _withdrawed) = oppcontract.getplayer(_addr);
+            if(_sum>0 && _sum == _beteth ) {
+                    if(_withdrawed == true) throw;
+                    uint256 reward = totaleth * ( _sum / oppcontract.gettotaleth() ) ;
+                    _addr.call.value(reward)();
+                    oppcontract.setwithdrawal(_addr);
+            }
+        }
+        reset();
+        oppcontract.reset();
+
+    }
+
+}
+
+
+contract Even {
+
+    uint256 public totaleth;
+    uint256 public totalplayer;
+    address public gameaddr;
+    address public oppaddr;
+    address public thisaddr=this;
+    Game public gamecontract;
+    Odd public oppcontract;
+
+    function Even(address _addr) {
+        gameaddr=_addr;
+        gamecontract=Game(gameaddr);
+    }
+
+    function gettotaleth() constant returns (uint256){
+        return totaleth;
+    }
+    function getlength() constant returns (uint256){
+        return list.length;
+    }
+    function getlist(uint256 _i) constant returns (address _addr, uint256 _sum){
+        return (list[_i].addr,list[_i].sum);
+    }
+
+    function getplayer(address _addr) constant returns (uint256 _index, uint256 _beteth, bool _withdrawed){
+        return (players[_addr].index, players[_addr].beteth, players[_addr].withdrawed);
+    }
+
+    function setwithdrawal(address _addr){
+        players[_addr].withdrawed = false;
+    }
+
+    modifier onlyContracts() { if (msg.sender == thisaddr || msg.sender == oppaddr) _; }
+    modifier onlyGameContract() { if (msg.sender == gameaddr) _; }
+
+    function set(address _addr) onlyGameContract {
+        oppaddr = _addr;
+        oppcontract = Odd(oppaddr);
+    }
+
+    struct Db {
+        address addr;
+        uint256 sum;
+    }
+
+    Db[] public list;
+
+    struct player {
+        uint256 index;
+        uint256 beteth;
+        bool withdrawed;
+    }
+
+
+    mapping (address => player) players;
+
+    function () payable {
+        if(msg.sender != gameaddr)
+        {
+        if(msg.value >0){
+
+            if(players[msg.sender].beteth==0){
+                list.push(Db({
+                    addr: msg.sender,
+                    sum: msg.value
+                }));
+                players[msg.sender].index=totalplayer;
+                totalplayer+=1;
+            }
+            else{
+                list[players[msg.sender].index].sum+=msg.value;
+            }
+
+            totaleth += msg.value;
+            players[msg.sender].beteth+=msg.value;
+            gamecontract.start();
+
+
+        }
+        }
+
+    }
+
+    function reset() onlyContracts {
+        delete list;
+        totaleth = 0;
+        totalplayer=0;
+    }
+
+    function win() onlyGameContract {
+        for(uint i=0; i<list.length; i++)
+        {
+            if(list[i].sum>0 && list[i].sum == players[list[i].addr].beteth) {
+                    if(players[list[i].addr].withdrawed == true) throw;
+                    list[i].addr.call.value(list[i].sum)();
+                    players[list[i].addr].withdrawed = true;
+            }
+        }
+    }
+
+    function lose() onlyGameContract {
+        uint256 fee = totaleth / 100;
+        gameaddr.call.value(fee)();
+        totaleth -= fee;
+        for(uint i=0; i<oppcontract.getlength(); i++)
+        {
+            (address _addr, uint256 _sum) = oppcontract.getlist(i);
+            (uint256 _index, uint256 _beteth, bool _withdrawed) = oppcontract.getplayer(_addr);
+            if(_sum>0 && _sum == _beteth ) {
+                    if(_withdrawed == true) throw;
+                    uint256 reward = totaleth * ( _sum / oppcontract.gettotaleth() ) ;
+                    _addr.call.value(reward)();
+                    oppcontract.setwithdrawal(_addr);
             }
         }
         reset();
