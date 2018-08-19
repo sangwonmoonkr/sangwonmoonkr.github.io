@@ -9,8 +9,8 @@ contract Game {
     address public thiscontract;
     uint256 public period;
     address feeaddr;
-    uint nextblocknumber;
-    bool gameon;
+    uint public nextblocknumber;
+    bool public gameon;
 
     modifier onlythisContract() { if (msg.sender == thiscontract) _; }
     modifier onlyContracts() { if (msg.sender == evenaddr || msg.sender == oddaddr) _; }
@@ -34,6 +34,8 @@ contract Game {
         oddaddr = _addr2;
         evencontract = Even(_addr1);
         oddcontract = Odd(_addr2);
+        evencontract.set(_addr2);
+        oddcontract.set(_addr1);
         period = _period;
         thiscontract = this;
     }
@@ -42,7 +44,7 @@ contract Game {
         if(gameon == true) throw;
         if(evencontract.gettotaleth() > 0 && oddcontract.gettotaleth() > 0){
         nextblocknumber = block.number+1;
-        gameon == true;
+        gameon = true;
         }
     }
 
